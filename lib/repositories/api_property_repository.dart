@@ -269,6 +269,45 @@ class ApiPropertyRepository implements PropertyRepository {
     }
   }
 
+  /// Mark property as sold (automatically removes from database)
+  Future<Map<String, dynamic>> markPropertyAsSold(String propertyId) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/properties/$propertyId/sold'),
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return {
+            'success': true,
+            'message': data['message'],
+            'propertyInfo': data['data'],
+          };
+        } else {
+          throw Exception(data['message'] ?? 'Failed to mark property as sold');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('Property not found');
+      } else if (response.statusCode == 400) {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Property is already sold');
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to mark property as sold');
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        throw Exception('Network error: Please check your internet connection');
+      } else if (e is FormatException) {
+        throw Exception('Invalid response format from server');
+      } else {
+        throw Exception('Failed to mark property as sold: ${e.toString()}');
+      }
+    }
+  }
+
   void dispose() {
     _client.close();
   }

@@ -32,8 +32,8 @@ const propertySchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
-    required: [true, 'Property image is required'],
     trim: true,
+    default: '',
   },
   cloudinaryPublicId: {
     type: String,
@@ -161,5 +161,81 @@ propertySchema.methods.updateStatus = function(newStatus) {
   this.status = newStatus;
   return this.save();
 };
+
+// Pre-save middleware to handle sold properties
+propertySchema.pre('save', async function(next) {
+  // Check if status is being changed to 'sold'
+  if (this.isModified('status') && this.status === 'sold') {
+    // Mark for deletion after save
+    this._shouldDelete = true;
+  }
+  next();
+});
+
+// Post-save middleware to delete sold properties
+propertySchema.post('save', async function(doc) {
+  if (doc._shouldDelete) {
+    try {
+      const { deleteImage } = require('../config/cloudinary');
+      
+      // Delete image from Cloudinary if exists
+      if (doc.cloudinaryPublicId) {
+        try {
+          await deleteImage(doc.cloudinaryPublicId);
+          console.log(`Deleted image from Cloudinary: ${doc.cloudinaryPublicId}`);
+        } catch (deleteError) {
+          console.error('Error deleting image from Cloudinary:', deleteError);
+        }
+      }
+      
+      // Delete the property from database
+      await this.model('Property').findByIdAndDelete(doc._id);
+      console.log(`Auto-deleted sold property: ${doc.title} (ID: ${doc.id})`);
+      
+    } catch (error) {
+      console.error('Error auto-deleting sold property:', error);
+    }
+  }
+});
+
+// Pre-findOneAndUpdate middleware to handle sold properties
+propertySchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate();
+  
+  // Check if status is being updated to 'sold'
+  if (update && (update.status === 'sold' || (update.$set && update.$set.status === 'sold'))) {
+    // Get the document before update to access cloudinaryPublicId
+    const doc = await this.model.findOne(this.getQuery());
+    
+    if (doc) {
+      try {
+        const { deleteImage } = require('../config/cloudinary');
+        
+        // Delete image from Cloudinary if exists
+        if (doc.cloudinaryPublicId) {
+          try {
+            await deleteImage(doc.cloudinaryPublicId);
+            console.log(`Deleted image from Cloudinary: ${doc.cloudinaryPublicId}`);
+          } catch (deleteError) {
+            console.error('Error deleting image from Cloudinary:', deleteError);
+          }
+        }
+        
+        // Instead of updating, delete the document
+        await this.model.findOneAndDelete(this.getQuery());
+        console.log(`Auto-deleted sold property: ${doc.title} (ID: ${doc.id})`);
+        
+        // Prevent the original update from executing
+        return next(new Error('PROPERTY_DELETED'));
+        
+      } catch (error) {
+        console.error('Error auto-deleting sold property:', error);
+        return next(error);
+      }
+    }
+  }
+  
+  next();
+});
 
 module.exports = mongoose.model('Property', propertySchema);

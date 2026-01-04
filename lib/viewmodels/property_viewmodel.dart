@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/property_model.dart';
 import '../repositories/property_repository.dart';
+import '../repositories/api_property_repository.dart';
 
 class PropertyViewModel extends ChangeNotifier {
   final PropertyRepository _repository;
@@ -89,6 +90,27 @@ class PropertyViewModel extends ChangeNotifier {
       _error = null;
     } catch (e) {
       _error = 'Failed to delete property: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> markPropertyAsSold(String id) async {
+    _setLoading(true);
+    try {
+      if (_repository is ApiPropertyRepository) {
+        final result = await (_repository as ApiPropertyRepository).markPropertyAsSold(id);
+        await fetchProperties(); // Refresh list (property will be removed)
+        _error = null;
+        // You could show a success message here
+      } else {
+        // For mock repository, just delete the property
+        await _repository.deleteProperty(id);
+        await fetchProperties();
+        _error = null;
+      }
+    } catch (e) {
+      _error = 'Failed to mark property as sold: $e';
     } finally {
       _setLoading(false);
     }

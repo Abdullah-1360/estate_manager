@@ -9,6 +9,7 @@ require('dotenv').config();
 
 const propertyRoutes = require('./routes/propertyRoutes');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
+const { soldPropertyLoggerMiddleware } = require('./middleware/soldPropertyLogger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,7 +54,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-app.use('/api/v1/properties', propertyRoutes);
+app.use('/api/v1/properties', soldPropertyLoggerMiddleware, propertyRoutes);
 
 // Error handling middleware
 app.use(notFound);

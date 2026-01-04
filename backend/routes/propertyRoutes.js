@@ -7,6 +7,9 @@ const {
   deleteProperty,
   uploadPropertyImage,
   getPropertyStats,
+  markPropertyAsSold,
+  cleanupSoldProperties,
+  getSoldPropertiesStats,
 } = require('../controllers/propertyController');
 const {
   validateProperty,
@@ -19,6 +22,12 @@ const router = express.Router();
 
 // Property statistics route (must be before /:id routes)
 router.get('/stats', getPropertyStats);
+
+// Sold properties statistics route
+router.get('/sold-stats', getSoldPropertiesStats);
+
+// Cleanup sold properties route (admin endpoint)
+router.post('/cleanup-sold', cleanupSoldProperties);
 
 // Main property routes
 router
@@ -34,5 +43,8 @@ router
 
 // Image upload route
 router.post('/:id/image', upload.single('image'), uploadPropertyImage);
+
+// Mark property as sold route
+router.post('/:id/sold', markPropertyAsSold);
 
 module.exports = router;

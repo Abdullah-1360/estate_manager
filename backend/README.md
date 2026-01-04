@@ -68,6 +68,9 @@ A robust Node.js backend API for the Estate Manager Flutter application with Clo
 | DELETE | `/api/v1/properties/:id` | Delete property |
 | POST | `/api/v1/properties/:id/image` | Upload property image |
 | GET | `/api/v1/properties/stats` | Get property statistics |
+| POST | `/api/v1/properties/:id/sold` | Mark property as sold (auto-deletes) |
+| GET | `/api/v1/properties/sold-stats` | Get sold properties statistics |
+| POST | `/api/v1/properties/cleanup-sold` | Cleanup any remaining sold properties |
 
 ### Query Parameters (GET /properties)
 
@@ -138,6 +141,139 @@ Content-Type: multipart/form-data
   "updatedAt": "2024-01-01T00:00:00.000Z"
 }
 ```
+
+## Sold Property Auto-Deletion
+
+### Overview
+
+When a property status is changed to "sold", the system automatically:
+
+1. **Removes the property** from the database
+2. **Deletes the associated image** from Cloudinary
+3. **Logs the transaction** for analytics and record-keeping
+4. **Returns confirmation** of the sale and removal
+
+### How It Works
+
+#### Automatic Deletion Triggers
+
+1. **Status Update**: When `PUT /api/v1/properties/:id` is called with `status: "sold"`
+2. **Direct Sale**: When `POST /api/v1/properties/:id/sold` is called
+3. **Batch Cleanup**: When `POST /api/v1/properties/cleanup-sold` is called
+
+#### Database Middleware
+
+The Property model includes pre-save and pre-update middleware that:
+- Detects when status changes to "sold"
+- Automatically deletes the Cloudinary image
+- Removes the property from the database
+- Logs the transaction
+
+#### Sale Logging
+
+All sold properties are logged to `backend/logs/sold-properties.log` with:
+- Complete property details
+- Sale timestamp
+- Cloudinary image information
+- Transaction metadata
+
+### API Endpoints for Sold Properties
+
+#### Mark Property as Sold
+```bash
+POST /api/v1/properties/{id}/sold
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Property marked as sold and automatically removed from listings",
+  "data": {
+    "id": "property-uuid",
+    "title": "Property Title",
+    "price": 450000
+  }
+}
+```
+
+#### Get Sold Properties Statistics
+```bash
+GET /api/v1/properties/sold-stats?days=30
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "period": "Last 30 days",
+    "totalSales": 5,
+    "totalValue": 2250000,
+    "averagePrice": 450000,
+    "salesByType": {
+      "house": 3,
+      "apartment": 2
+    },
+    "salesByMonth": {
+      "2024-01": 3,
+      "2024-02": 2
+    },
+    "recentSales": [...]
+  }
+}
+```
+
+#### Cleanup Remaining Sold Properties
+```bash
+POST /api/v1/properties/cleanup-sold
+```
+
+This endpoint manually cleans up any properties that might have the "sold" status but weren't automatically deleted.
+
+### Scheduled Cleanup
+
+Run the cleanup script manually or as a cron job:
+
+```bash
+# Manual cleanup
+npm run cleanup-sold
+
+# Or directly
+node scripts/cleanup-sold-properties.js
+```
+
+### Cron Job Example
+
+Add to your crontab for daily cleanup at 2 AM:
+```bash
+0 2 * * * cd /path/to/backend && npm run cleanup-sold
+```
+
+### Sale Records
+
+Sold properties are logged with complete details for:
+- **Analytics**: Track sales performance and trends
+- **Reporting**: Generate sales reports and statistics
+- **Audit Trail**: Maintain records of all transactions
+- **Recovery**: Restore property data if needed
+
+### Configuration
+
+The sold property system works automatically with no configuration needed. However, you can:
+
+1. **Disable Auto-Deletion**: Modify the Property model middleware
+2. **Change Log Location**: Update `soldPropertyLogger.js`
+3. **Customize Logging**: Modify the logging format and fields
+4. **Add Notifications**: Integrate with email/SMS services
+
+### Important Notes
+
+⚠️ **Data Loss Warning**: Once a property is marked as sold, it is permanently deleted from the database and Cloudinary. Only log records remain.
+
+✅ **Backup Strategy**: Consider implementing a backup system or archive database for sold properties if you need to retain the data.
+
+🔄 **Immediate Effect**: The deletion happens immediately when the status changes - there's no undo functionality.
 
 ## Image Management
 

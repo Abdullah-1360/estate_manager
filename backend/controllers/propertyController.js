@@ -1,5 +1,6 @@
 const Property = require('../models/Property');
 const { deleteImage, getImageVariants } = require('../config/cloudinary');
+const SoldPropertyService = require('../services/soldPropertyService');
 const { v4: uuidv4 } = require('uuid');
 
 // @desc    Get all properties
@@ -128,6 +129,9 @@ const createProperty = async (req, res) => {
     if (req.file) {
       req.body.imageUrl = req.file.path;
       req.body.cloudinaryPublicId = req.file.filename;
+    } else if (!req.body.imageUrl) {
+      // Set a default placeholder image if no image is provided
+      req.body.imageUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
     }
 
     const property = await Property.create(req.body);
@@ -178,27 +182,69 @@ const updateProperty = async (req, res) => {
       req.body.cloudinaryPublicId = req.file.filename;
     }
 
-    // Update property
-    const updatedProperty = await Property.findOneAndUpdate(
-      { id: req.params.id },
-      req.body,
-      { new: true, runValidators: true }
-    );
+    // Check if status is being changed to 'sold'
+    const isBeingSold = req.body.status === 'sold' && property.status !== 'sold';
 
-    // Delete old image if new image was uploaded
-    if (oldImagePublicId && req.file) {
+    if (isBeingSold) {
+      // Property is being marked as sold - it will be auto-deleted
       try {
-        await deleteImage(oldImagePublicId);
-      } catch (deleteError) {
-        console.error('Error deleting old image:', deleteError);
-      }
-    }
+        // Delete old image if new image was uploaded (before property deletion)
+        if (oldImagePublicId && req.file) {
+          try {
+            await deleteImage(oldImagePublicId);
+          } catch (deleteError) {
+            console.error('Error deleting old image:', deleteError);
+          }
+        }
 
-    res.status(200).json({
-      success: true,
-      message: 'Property updated successfully',
-      data: updatedProperty,
-    });
+        // Update the property (this will trigger auto-deletion via middleware)
+        await Property.findOneAndUpdate(
+          { id: req.params.id },
+          req.body,
+          { new: true, runValidators: true }
+        );
+
+        // If we reach here, something went wrong with auto-deletion
+        return res.status(200).json({
+          success: true,
+          message: 'Property marked as sold and removed from listings',
+          data: null,
+        });
+
+      } catch (error) {
+        if (error.message === 'PROPERTY_DELETED') {
+          // This is expected - property was auto-deleted
+          return res.status(200).json({
+            success: true,
+            message: 'Property marked as sold and automatically removed from listings',
+            data: null,
+          });
+        }
+        throw error;
+      }
+    } else {
+      // Normal update (not being sold)
+      const updatedProperty = await Property.findOneAndUpdate(
+        { id: req.params.id },
+        req.body,
+        { new: true, runValidators: true }
+      );
+
+      // Delete old image if new image was uploaded
+      if (oldImagePublicId && req.file) {
+        try {
+          await deleteImage(oldImagePublicId);
+        } catch (deleteError) {
+          console.error('Error deleting old image:', deleteError);
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Property updated successfully',
+        data: updatedProperty,
+      });
+    }
   } catch (error) {
     // If update fails and new image was uploaded, delete the new image
     if (req.file && req.file.filename) {
@@ -391,6 +437,88 @@ const getPropertyStats = async (req, res) => {
   }
 };
 
+// @desc    Mark property as sold (automatically removes from database)
+// @route   POST /api/v1/properties/:id/sold
+// @access  Public
+const markPropertyAsSold = async (req, res) => {
+  try {
+    const result = await SoldPropertyService.markAsSold(req.params.id);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result.propertyInfo,
+    });
+  } catch (error) {
+    if (error.message === 'Property not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found',
+      });
+    }
+    
+    if (error.message === 'Property is already marked as sold') {
+      return res.status(400).json({
+        success: false,
+        message: 'Property is already marked as sold',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error marking property as sold',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Cleanup sold properties (admin endpoint)
+// @route   POST /api/v1/properties/cleanup-sold
+// @access  Public (should be protected in production)
+const cleanupSoldProperties = async (req, res) => {
+  try {
+    const result = await SoldPropertyService.cleanupSoldProperties();
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        cleanedCount: result.count,
+        errors: result.errors,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error cleaning up sold properties',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get sold properties statistics from logs
+// @route   GET /api/v1/properties/sold-stats
+// @access  Public (should be protected in production)
+const getSoldPropertiesStats = async (req, res) => {
+  try {
+    const { soldPropertyLogger } = require('../middleware/soldPropertyLogger');
+    const days = parseInt(req.query.days) || 30;
+    
+    const stats = await soldPropertyLogger.getSoldPropertiesStats(days);
+    
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching sold properties statistics',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getProperties,
   getProperty,
@@ -399,4 +527,7 @@ module.exports = {
   deleteProperty,
   uploadPropertyImage,
   getPropertyStats,
+  markPropertyAsSold,
+  cleanupSoldProperties,
+  getSoldPropertiesStats,
 };
