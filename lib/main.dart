@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'core/config/app_config.dart';
 import 'core/theme.dart';
 import 'repositories/api_property_repository.dart';
 import 'repositories/property_repository.dart';
@@ -9,11 +9,15 @@ import 'views/dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Load environment variables (create .env file if missing, handled gracefully if empty or missing in dev for now, but better to have it)
+  
+  // Initialize app configuration (loads .env file)
   try {
-    await dotenv.load(fileName: ".env");
+    await AppConfig.initialize();
+    debugPrint('✅ App configuration loaded successfully');
+    debugPrint('🌐 API URL: ${AppConfig.apiUrl}');
   } catch (e) {
-    debugPrint("Warning: .env file not found or could not be loaded. Using defaults.");
+    debugPrint("⚠️ Warning: Could not load app configuration: $e");
+    debugPrint("Using default configuration values");
   }
 
   runApp(const MyApp());
@@ -38,7 +42,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Real Estate Manager',
+        title: AppConfig.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const DashboardScreen(),

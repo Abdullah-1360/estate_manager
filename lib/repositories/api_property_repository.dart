@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../core/config/app_config.dart';
 import '../models/property_model.dart';
 import 'property_repository.dart';
 
@@ -12,7 +12,7 @@ class ApiPropertyRepository implements PropertyRepository {
   ApiPropertyRepository({
     String? baseUrl,
     http.Client? client,
-  }) : baseUrl = baseUrl ?? dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1',
+  }) : baseUrl = baseUrl ?? AppConfig.apiUrl,
         _client = client ?? http.Client();
 
   Map<String, String> get _headers => {

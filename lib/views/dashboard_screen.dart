@@ -5,6 +5,8 @@ import '../viewmodels/property_viewmodel.dart';
 import '../widgets/property_card.dart';
 import 'edit_property_screen.dart';
 import 'property_detail_screen.dart';
+import 'debug_screen.dart';
+import '../core/config/app_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -202,10 +204,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
-              const CircleAvatar(
-                radius: 24,
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
-                backgroundColor: AppColors.background,
+              Row(
+                children: [
+                  // Debug button (only show in debug mode)
+                  if (AppConfig.isDebugMode) ...[
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DebugScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.bug_report, size: 20),
+                      tooltip: 'Debug Configuration',
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                    backgroundColor: AppColors.background,
+                  ),
+                ],
               ),
             ],
           ),
