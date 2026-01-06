@@ -125,13 +125,14 @@ const createProperty = async (req, res) => {
       req.body.id = uuidv4();
     }
 
-    // Handle image upload
-    if (req.file) {
-      req.body.imageUrl = req.file.path;
-      req.body.cloudinaryPublicId = req.file.filename;
-    } else if (!req.body.imageUrl) {
-      // Set a default placeholder image if no image is provided
-      req.body.imageUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+    // Handle multiple image uploads
+    if (req.files && req.files.length > 0) {
+      req.body.imageUrls = req.files.map(file => file.path);
+      req.body.cloudinaryPublicIds = req.files.map(file => file.filename);
+    } else if (!req.body.imageUrls || req.body.imageUrls.length === 0) {
+      // Set a default placeholder image if no images are provided
+      req.body.imageUrls = ['https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'];
+      req.body.cloudinaryPublicIds = [];
     }
 
     const property = await Property.create(req.body);
@@ -142,12 +143,14 @@ const createProperty = async (req, res) => {
       data: property,
     });
   } catch (error) {
-    // If property creation fails and image was uploaded, delete the image
-    if (req.file && req.file.filename) {
-      try {
-        await deleteImage(req.file.filename);
-      } catch (deleteError) {
-        console.error('Error deleting uploaded image:', deleteError);
+    // If property creation fails and images were uploaded, delete the images
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        try {
+          await deleteImage(file.filename);
+        } catch (deleteError) {
+          console.error('Error deleting uploaded image:', deleteError);
+        }
       }
     }
 
@@ -173,13 +176,13 @@ const updateProperty = async (req, res) => {
       });
     }
 
-    let oldImagePublicId = null;
+    let oldImagePublicIds = [];
 
-    // Handle new image upload
-    if (req.file) {
-      oldImagePublicId = property.cloudinaryPublicId;
-      req.body.imageUrl = req.file.path;
-      req.body.cloudinaryPublicId = req.file.filename;
+    // Handle new image uploads
+    if (req.files && req.files.length > 0) {
+      oldImagePublicIds = property.cloudinaryPublicIds || [];
+      req.body.imageUrls = req.files.map(file => file.path);
+      req.body.cloudinaryPublicIds = req.files.map(file => file.filename);
     }
 
     // Check if status is being changed to 'sold'
@@ -188,12 +191,14 @@ const updateProperty = async (req, res) => {
     if (isBeingSold) {
       // Property is being marked as sold - it will be auto-deleted
       try {
-        // Delete old image if new image was uploaded (before property deletion)
-        if (oldImagePublicId && req.file) {
-          try {
-            await deleteImage(oldImagePublicId);
-          } catch (deleteError) {
-            console.error('Error deleting old image:', deleteError);
+        // Delete old images if new images were uploaded (before property deletion)
+        if (oldImagePublicIds.length > 0 && req.files && req.files.length > 0) {
+          for (const publicId of oldImagePublicIds) {
+            try {
+              await deleteImage(publicId);
+            } catch (deleteError) {
+              console.error('Error deleting old image:', deleteError);
+            }
           }
         }
 
@@ -230,12 +235,14 @@ const updateProperty = async (req, res) => {
         { new: true, runValidators: true }
       );
 
-      // Delete old image if new image was uploaded
-      if (oldImagePublicId && req.file) {
-        try {
-          await deleteImage(oldImagePublicId);
-        } catch (deleteError) {
-          console.error('Error deleting old image:', deleteError);
+      // Delete old images if new images were uploaded
+      if (oldImagePublicIds.length > 0 && req.files && req.files.length > 0) {
+        for (const publicId of oldImagePublicIds) {
+          try {
+            await deleteImage(publicId);
+          } catch (deleteError) {
+            console.error('Error deleting old image:', deleteError);
+          }
         }
       }
 
@@ -246,12 +253,14 @@ const updateProperty = async (req, res) => {
       });
     }
   } catch (error) {
-    // If update fails and new image was uploaded, delete the new image
-    if (req.file && req.file.filename) {
-      try {
-        await deleteImage(req.file.filename);
-      } catch (deleteError) {
-        console.error('Error deleting uploaded image:', deleteError);
+    // If update fails and new images were uploaded, delete the new images
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        try {
+          await deleteImage(file.filename);
+        } catch (deleteError) {
+          console.error('Error deleting uploaded image:', deleteError);
+        }
       }
     }
 
@@ -277,12 +286,14 @@ const deleteProperty = async (req, res) => {
       });
     }
 
-    // Delete image from Cloudinary if exists
-    if (property.cloudinaryPublicId) {
-      try {
-        await deleteImage(property.cloudinaryPublicId);
-      } catch (deleteError) {
-        console.error('Error deleting image from Cloudinary:', deleteError);
+    // Delete images from Cloudinary if exists
+    if (property.cloudinaryPublicIds && property.cloudinaryPublicIds.length > 0) {
+      for (const publicId of property.cloudinaryPublicIds) {
+        try {
+          await deleteImage(publicId);
+        } catch (deleteError) {
+          console.error('Error deleting image from Cloudinary:', deleteError);
+        }
       }
     }
 

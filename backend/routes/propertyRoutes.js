@@ -5,7 +5,7 @@ const {
   createProperty,
   updateProperty,
   deleteProperty,
-  uploadPropertyImage,
+  uploadPropertyImages,
   getPropertyStats,
   markPropertyAsSold,
   cleanupSoldProperties,
@@ -33,16 +33,16 @@ router.post('/cleanup-sold', cleanupSoldProperties);
 router
   .route('/')
   .get(validateQuery, getProperties)
-  .post(upload.single('image'), validateProperty, createProperty);
+  .post(upload.array('images', 10), validateProperty, createProperty);
 
 router
   .route('/:id')
   .get(getProperty)
-  .put(upload.single('image'), validatePropertyUpdate, updateProperty)
+  .put(upload.array('images', 10), validatePropertyUpdate, updateProperty)
   .delete(deleteProperty);
 
 // Image upload route
-router.post('/:id/image', upload.single('image'), uploadPropertyImage);
+router.post('/:id/images', upload.array('images', 10), uploadPropertyImages);
 
 // Mark property as sold route
 router.post('/:id/sold', markPropertyAsSold);

@@ -30,15 +30,14 @@ const propertySchema = new mongoose.Schema({
     trim: true,
     maxlength: [2000, 'Description cannot exceed 2000 characters'],
   },
-  imageUrl: {
+  imageUrls: [{
     type: String,
     trim: true,
-    default: '',
-  },
-  cloudinaryPublicId: {
+  }],
+  cloudinaryPublicIds: [{
     type: String,
     trim: true,
-  },
+  }],
   bedrooms: {
     type: Number,
     required: [true, 'Number of bedrooms is required'],
@@ -178,13 +177,15 @@ propertySchema.post('save', async function(doc) {
     try {
       const { deleteImage } = require('../config/cloudinary');
       
-      // Delete image from Cloudinary if exists
-      if (doc.cloudinaryPublicId) {
-        try {
-          await deleteImage(doc.cloudinaryPublicId);
-          console.log(`Deleted image from Cloudinary: ${doc.cloudinaryPublicId}`);
-        } catch (deleteError) {
-          console.error('Error deleting image from Cloudinary:', deleteError);
+      // Delete images from Cloudinary if exists
+      if (doc.cloudinaryPublicIds && doc.cloudinaryPublicIds.length > 0) {
+        for (const publicId of doc.cloudinaryPublicIds) {
+          try {
+            await deleteImage(publicId);
+            console.log(`Deleted image from Cloudinary: ${publicId}`);
+          } catch (deleteError) {
+            console.error('Error deleting image from Cloudinary:', deleteError);
+          }
         }
       }
       
@@ -211,13 +212,15 @@ propertySchema.pre('findOneAndUpdate', async function(next) {
       try {
         const { deleteImage } = require('../config/cloudinary');
         
-        // Delete image from Cloudinary if exists
-        if (doc.cloudinaryPublicId) {
-          try {
-            await deleteImage(doc.cloudinaryPublicId);
-            console.log(`Deleted image from Cloudinary: ${doc.cloudinaryPublicId}`);
-          } catch (deleteError) {
-            console.error('Error deleting image from Cloudinary:', deleteError);
+        // Delete images from Cloudinary if exists
+        if (doc.cloudinaryPublicIds && doc.cloudinaryPublicIds.length > 0) {
+          for (const publicId of doc.cloudinaryPublicIds) {
+            try {
+              await deleteImage(publicId);
+              console.log(`Deleted image from Cloudinary: ${publicId}`);
+            } catch (deleteError) {
+              console.error('Error deleting image from Cloudinary:', deleteError);
+            }
           }
         }
         
