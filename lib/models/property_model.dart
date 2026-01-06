@@ -6,7 +6,7 @@ class PropertyModel {
   final String address;
   final double price;
   final String description;
-  final String imageUrl;
+  final List<String> imageUrls;
   final int bedrooms;
   final int bathrooms;
   final PropertyStatus status;
@@ -25,7 +25,7 @@ class PropertyModel {
     required this.address,
     required this.price,
     required this.description,
-    required this.imageUrl,
+    required this.imageUrls,
     required this.bedrooms,
     required this.bathrooms,
     required this.status,
@@ -45,7 +45,7 @@ class PropertyModel {
     String? address,
     double? price,
     String? description,
-    String? imageUrl,
+    List<String>? imageUrls,
     int? bedrooms,
     int? bathrooms,
     PropertyStatus? status,
@@ -64,7 +64,7 @@ class PropertyModel {
       address: address ?? this.address,
       price: price ?? this.price,
       description: description ?? this.description,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       status: status ?? this.status,
@@ -82,6 +82,9 @@ class PropertyModel {
   // Helper to convert status to string for UI or storage if needed
   String get statusString => status.toString().split('.').last;
 
+  // Helper to get primary image for backward compatibility
+  String get primaryImageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+
   // JSON serialization
   Map<String, dynamic> toJson() {
     return {
@@ -90,7 +93,7 @@ class PropertyModel {
       'address': address,
       'price': price,
       'description': description,
-      'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'status': statusString,
@@ -111,7 +114,9 @@ class PropertyModel {
       address: json['address'] as String,
       price: (json['price'] as num).toDouble(),
       description: json['description'] as String,
-      imageUrl: json['imageUrl'] as String,
+      imageUrls: json['imageUrls'] != null 
+          ? List<String>.from(json['imageUrls'] as List) 
+          : [],
       bedrooms: json['bedrooms'] as int,
       bathrooms: json['bathrooms'] as int,
       status: _parseStatus(json['status'] as String),

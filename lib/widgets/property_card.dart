@@ -45,7 +45,7 @@ class PropertyCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                     child: Image.network(
-                      property.imageUrl,
+                      property.primaryImageUrl,
                       height: 220,
                       width: double.infinity,
                       fit: BoxFit.cover,

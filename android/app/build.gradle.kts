@@ -6,9 +6,8 @@ plugins {
 }
 
 android {
-    namespace = "com.example.estate_manager"
+    namespace = "com.example.testing123"
     compileSdk = flutter.compileSdkVersion
-    buildToolsVersion = "34.0.0"
     ndkVersion = "29.0.13113456"
 
     compileOptions {
@@ -22,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.estate_manager"
+        applicationId = "com.example.testing123"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

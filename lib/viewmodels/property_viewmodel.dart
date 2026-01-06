@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/property_model.dart';
 import '../repositories/property_repository.dart';
@@ -56,10 +57,14 @@ class PropertyViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> addProperty(PropertyModel property) async {
+  Future<void> addProperty(PropertyModel property, {List<File>? imageFiles}) async {
     _setLoading(true);
     try {
-      await _repository.addProperty(property);
+      if (_repository is ApiPropertyRepository && imageFiles != null && imageFiles.isNotEmpty) {
+        await _repository.createPropertyWithImages(property, imageFiles);
+      } else {
+        await _repository.addProperty(property);
+      }
       await fetchProperties(); // Refresh list
       _error = null;
     } catch (e) {
@@ -69,10 +74,14 @@ class PropertyViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateProperty(PropertyModel property) async {
+  Future<void> updateProperty(PropertyModel property, {List<File>? imageFiles}) async {
     _setLoading(true);
     try {
-      await _repository.updateProperty(property);
+      if (_repository is ApiPropertyRepository && imageFiles != null && imageFiles.isNotEmpty) {
+        await _repository.updatePropertyWithImages(property, imageFiles);
+      } else {
+        await _repository.updateProperty(property);
+      }
       await fetchProperties(); // Refresh list
       _error = null;
     } catch (e) {
@@ -99,7 +108,7 @@ class PropertyViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       if (_repository is ApiPropertyRepository) {
-        final result = await (_repository as ApiPropertyRepository).markPropertyAsSold(id);
+        await _repository.markPropertyAsSold(id);
         await fetchProperties(); // Refresh list (property will be removed)
         _error = null;
         // You could show a success message here

@@ -141,6 +141,54 @@ class ApiPropertyRepository implements PropertyRepository {
     }
   }
 
+  /// Create property with image upload
+  Future<PropertyModel> createPropertyWithImage(PropertyModel property, File? imageFile) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/properties'),
+      );
+
+      // Add property data
+      final propertyJson = property.toJson();
+      propertyJson.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // Add image if provided
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imageFile.path),
+        );
+      }
+
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return PropertyModel.fromJson(data['data']);
+        } else {
+          throw Exception(data['message'] ?? 'Failed to create property');
+        }
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to create property');
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        throw Exception('Network error: Please check your internet connection');
+      } else if (e is FormatException) {
+        throw Exception('Invalid response format from server');
+      } else {
+        throw Exception('Failed to create property: ${e.toString()}');
+      }
+    }
+  }
+
   @override
   Future<void> updateProperty(PropertyModel property) async {
     try {
@@ -304,6 +352,154 @@ class ApiPropertyRepository implements PropertyRepository {
         throw Exception('Invalid response format from server');
       } else {
         throw Exception('Failed to mark property as sold: ${e.toString()}');
+      }
+    }
+  }
+
+  /// Update property with optional image upload
+  Future<PropertyModel> updatePropertyWithImage(PropertyModel property, File? imageFile) async {
+    try {
+      final request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$baseUrl/properties/${property.id}'),
+      );
+
+      // Add property data
+      final propertyJson = property.toJson();
+      propertyJson.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // Add image if provided
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imageFile.path),
+        );
+      }
+
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return PropertyModel.fromJson(data['data']);
+        } else {
+          throw Exception(data['message'] ?? 'Failed to update property');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('Property not found');
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to update property');
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        throw Exception('Network error: Please check your internet connection');
+      } else if (e is FormatException) {
+        throw Exception('Invalid response format from server');
+      } else {
+        throw Exception('Failed to update property: ${e.toString()}');
+      }
+    }
+  }
+
+  /// Create property with multiple images upload
+  Future<PropertyModel> createPropertyWithImages(PropertyModel property, List<File> imageFiles) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/properties'),
+      );
+
+      // Add property data
+      final propertyJson = property.toJson();
+      propertyJson.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // Add multiple images
+      for (int i = 0; i < imageFiles.length; i++) {
+        request.files.add(
+          await http.MultipartFile.fromPath('images', imageFiles[i].path),
+        );
+      }
+
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return PropertyModel.fromJson(data['data']);
+        } else {
+          throw Exception(data['message'] ?? 'Failed to create property');
+        }
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to create property');
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        throw Exception('Network error: Please check your internet connection');
+      } else if (e is FormatException) {
+        throw Exception('Invalid response format from server');
+      } else {
+        throw Exception('Failed to create property: ${e.toString()}');
+      }
+    }
+  }
+
+  /// Update property with multiple images upload
+  Future<PropertyModel> updatePropertyWithImages(PropertyModel property, List<File> imageFiles) async {
+    try {
+      final request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$baseUrl/properties/${property.id}'),
+      );
+
+      // Add property data
+      final propertyJson = property.toJson();
+      propertyJson.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // Add multiple images
+      for (int i = 0; i < imageFiles.length; i++) {
+        request.files.add(
+          await http.MultipartFile.fromPath('images', imageFiles[i].path),
+        );
+      }
+
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return PropertyModel.fromJson(data['data']);
+        } else {
+          throw Exception(data['message'] ?? 'Failed to update property');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('Property not found');
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to update property');
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        throw Exception('Network error: Please check your internet connection');
+      } else if (e is FormatException) {
+        throw Exception('Invalid response format from server');
+      } else {
+        throw Exception('Failed to update property: ${e.toString()}');
       }
     }
   }
