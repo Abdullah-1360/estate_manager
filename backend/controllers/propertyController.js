@@ -313,26 +313,28 @@ const deleteProperty = async (req, res) => {
   }
 };
 
-// @desc    Upload property image
-// @route   POST /api/v1/properties/:id/image
+// @desc    Upload property images
+// @route   POST /api/v1/properties/:id/images
 // @access  Public
-const uploadPropertyImage = async (req, res) => {
+const uploadPropertyImages = async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No image file provided',
+        message: 'No image files provided',
       });
     }
 
     const property = await Property.findOne({ id: req.params.id });
 
     if (!property) {
-      // Delete uploaded image if property not found
-      try {
-        await deleteImage(req.file.filename);
-      } catch (deleteError) {
-        console.error('Error deleting uploaded image:', deleteError);
+      // Delete uploaded images if property not found
+      for (const file of req.files) {
+        try {
+          await deleteImage(file.filename);
+        } catch (deleteError) {
+          console.error('Error deleting uploaded image:', deleteError);
+        }
       }
 
       return res.status(404).json({
@@ -341,47 +343,55 @@ const uploadPropertyImage = async (req, res) => {
       });
     }
 
-    const oldImagePublicId = property.cloudinaryPublicId;
+    const oldImagePublicIds = property.cloudinaryPublicIds || [];
 
-    // Update property with new image
-    property.imageUrl = req.file.path;
-    property.cloudinaryPublicId = req.file.filename;
+    // Update property with new images
+    property.imageUrls = req.files.map(file => file.path);
+    property.cloudinaryPublicIds = req.files.map(file => file.filename);
     await property.save();
 
-    // Delete old image if exists
-    if (oldImagePublicId) {
-      try {
-        await deleteImage(oldImagePublicId);
-      } catch (deleteError) {
-        console.error('Error deleting old image:', deleteError);
+    // Delete old images if exist
+    if (oldImagePublicIds.length > 0) {
+      for (const publicId of oldImagePublicIds) {
+        try {
+          await deleteImage(publicId);
+        } catch (deleteError) {
+          console.error('Error deleting old image:', deleteError);
+        }
       }
     }
 
-    // Generate image variants
-    const imageVariants = getImageVariants(req.file.filename);
+    // Generate image variants for all images
+    const imageVariants = req.files.map(file => ({
+      url: file.path,
+      publicId: file.filename,
+      variants: getImageVariants(file.filename),
+    }));
 
     res.status(200).json({
       success: true,
-      message: 'Image uploaded successfully',
+      message: 'Images uploaded successfully',
       data: {
-        imageUrl: req.file.path,
-        publicId: req.file.filename,
-        variants: imageVariants,
+        imageUrls: req.files.map(file => file.path),
+        publicIds: req.files.map(file => file.filename),
+        images: imageVariants,
       },
     });
   } catch (error) {
-    // Delete uploaded image if update fails
-    if (req.file && req.file.filename) {
-      try {
-        await deleteImage(req.file.filename);
-      } catch (deleteError) {
-        console.error('Error deleting uploaded image:', deleteError);
+    // Delete uploaded images if update fails
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        try {
+          await deleteImage(file.filename);
+        } catch (deleteError) {
+          console.error('Error deleting uploaded image:', deleteError);
+        }
       }
     }
 
     res.status(500).json({
       success: false,
-      message: 'Error uploading image',
+      message: 'Error uploading images',
       error: error.message,
     });
   }
@@ -536,7 +546,7 @@ module.exports = {
   createProperty,
   updateProperty,
   deleteProperty,
-  uploadPropertyImage,
+  uploadPropertyImages,
   getPropertyStats,
   markPropertyAsSold,
   cleanupSoldProperties,

@@ -20,8 +20,8 @@ const propertySchema = Joi.object({
     'string.empty': 'Description is required',
     'string.max': 'Description cannot exceed 2000 characters',
   }),
-  imageUrl: Joi.string().uri().optional().allow('').messages({
-    'string.uri': 'Image URL must be a valid URL',
+  imageUrls: Joi.array().items(Joi.string().uri()).optional().messages({
+    'string.uri': 'Image URLs must be valid URLs',
   }),
   bedrooms: Joi.number().integer().min(0).max(50).required().messages({
     'number.base': 'Bedrooms must be a number',

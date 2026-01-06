@@ -418,7 +418,15 @@ class ApiPropertyRepository implements PropertyRepository {
       final propertyJson = property.toJson();
       propertyJson.forEach((key, value) {
         if (value != null) {
-          request.fields[key] = value.toString();
+          if (key == 'imageUrls') {
+            // Skip imageUrls as we'll add the actual files
+            return;
+          }
+          if (value is List) {
+            request.fields[key] = jsonEncode(value);
+          } else {
+            request.fields[key] = value.toString();
+          }
         }
       });
 
@@ -466,7 +474,15 @@ class ApiPropertyRepository implements PropertyRepository {
       final propertyJson = property.toJson();
       propertyJson.forEach((key, value) {
         if (value != null) {
-          request.fields[key] = value.toString();
+          if (key == 'imageUrls') {
+            // Skip imageUrls as we'll add the actual files
+            return;
+          }
+          if (value is List) {
+            request.fields[key] = jsonEncode(value);
+          } else {
+            request.fields[key] = value.toString();
+          }
         }
       });
 

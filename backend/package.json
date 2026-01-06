@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "seed": "node scripts/seed-database.js",
-    "cleanup-sold": "node scripts/cleanup-sold-properties.js"
+    "cleanup-sold": "node scripts/cleanup-sold-properties.js",
+    "migrate-images": "node scripts/migrate-images.js"
   },
   "dependencies": {
     "express": "^4.18.2",
